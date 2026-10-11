@@ -89,5 +89,5 @@ void save(){String k=title.replace(" ","_");pref.edit().putString(k,String.join(
 }
 J2
 gradle wrapper --gradle-version 8.4
-chmod +x./gradlew
-./gradlew assembleDebug --no-daemon
+chmod 755 gradlew
+bash./gradlew assembleDebug --no-daemon
