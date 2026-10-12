@@ -12,7 +12,6 @@ import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import java.io.ByteArrayOutputStream;
-import com.alsharq.team.R;
 
 public class AdminHelper {
 
@@ -34,7 +33,7 @@ public class AdminHelper {
         new AlertDialog.Builder(context)
                 .setTitle("إضافة عمل جديد")
                 .setView(view)
-                .setPositiveButton("إضافة", (dialog, which) -> {
+                .setPositiveButton("إضافة", (d, w) -> {
                     String title = etTitle.getText().toString().trim();
                     if (title.isEmpty()) {
                         Toast.makeText(context, "اكتب العنوان", Toast.LENGTH_SHORT).show();
@@ -50,7 +49,6 @@ public class AdminHelper {
         if (bitmap == null) return "";
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.JPEG, 70, baos);
-        byte[] bytes = baos.toByteArray();
-        return Base64.encodeToString(bytes, Base64.DEFAULT);
+        return Base64.encodeToString(baos.toByteArray(), Base64.DEFAULT);
     }
 }
