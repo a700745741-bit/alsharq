@@ -1,55 +1,105 @@
 package com.alsharq.global;
-import android.app.Activity;
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Bundle;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import com.alsharq.team.AdminHelper;
 
-public class MainActivity extends Activity {
-    WebView webView;
+import android.os.Bundle;
+import android.widget.*;
+import android.view.View;
+import androidx.appcompat.app.AppCompatActivity;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.HashMap;
+import java.util.Map;
+
+public class MainActivity extends AppCompatActivity {
+
+    EditText emailField, passField;
+    Button loginBtn, registerBtn;
+    TextView statusText;
+    FirebaseAuth auth;
+    FirebaseFirestore db;
+
     @Override
-    protected void onCreate(Bundle savedInstanceState){
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // نصمم الواجهة برمجياً عشان ما نحتاج ملف layout
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout btnLayout = new LinearLayout(this);
-        btnLayout.setOrientation(LinearLayout.HORIZONTAL);
-        Button btnWhats = new Button(this);
-        btnWhats.setText("واتساب");
-        Button btnFb = new Button(this);
-        btnFb.setText("فيسبوك");
-        Button btnSite = new Button(this);
-        btnSite.setText("الموقع");
-        Button btnAdd = new Button(this);
-        btnAdd.setText("اضافة بطولة +");
-        btnWhats.setOnClickListener(v -> openLink("https://wa.me/967774000000"));
-        btnFb.setOnClickListener(v -> openLink("https://facebook.com/alsharq"));
-        btnSite.setOnClickListener(v -> webView.loadUrl("https://alsharq-global.com"));
-        btnAdd.setOnClickListener(v -> AdminHelper.showAddDialog(this, "بطولات الفريق"));
-        btnLayout.addView(btnWhats);
-        btnLayout.addView(btnFb);
-        btnLayout.addView(btnSite);
-        btnLayout.addView(btnAdd);
-        webView = new WebView(this);
-        webView.getSettings().setJavaScriptEnabled(true);
-        webView.setWebViewClient(new WebViewClient());
-        webView.loadUrl("https://alsharq-global.com");
-        layout.addView(btnLayout);
-        layout.addView(webView);
+        layout.setPadding(50, 100, 50, 100);
+
+        emailField = new EditText(this);
+        emailField.setHint("البريد الإلكتروني");
+        
+        passField = new EditText(this);
+        passField.setHint("كلمة المرور");
+        passField.setInputType(129); // password
+
+        loginBtn = new Button(this);
+        loginBtn.setText("تسجيل دخول");
+
+        registerBtn = new Button(this);
+        registerBtn.setText("إنشاء حساب جديد");
+
+        statusText = new TextView(this);
+        statusText.setText("مرحباً في الشرق العالمي - سجل دخولك");
+
+        layout.addView(statusText);
+        layout.addView(emailField);
+        layout.addView(passField);
+        layout.addView(loginBtn);
+        layout.addView(registerBtn);
+
         setContentView(layout);
-    }
-    void openLink(String url){
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
-    }
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            AdminHelper.handleImageResult(this, data, AdminHelper.tempPreview);
+
+        auth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+
+        // لو مسجل من قبل يدخل مباشرة
+        if (auth.getCurrentUser() != null) {
+            statusText.setText("تم تسجيل الدخول: " + auth.getCurrentUser().getEmail());
         }
+
+        loginBtn.setOnClickListener(v -> login());
+        registerBtn.setOnClickListener(v -> register());
+    }
+
+    void login() {
+        String email = emailField.getText().toString().trim();
+        String pass = passField.getText().toString().trim();
+        if(email.isEmpty() || pass.isEmpty()){
+            Toast.makeText(this, "اكمل البيانات", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        statusText.setText("جاري تسجيل الدخول...");
+        auth.signInWithEmailAndPassword(email, pass)
+            .addOnSuccessListener(a -> {
+                statusText.setText("تم الدخول بنجاح: " + email);
+                Toast.makeText(this, "مرحباً!", Toast.LENGTH_SHORT).show();
+                // هنا لاحقاً نفتح صفحة الألبومات
+            })
+            .addOnFailureListener(e -> {
+                statusText.setText("فشل: " + e.getMessage());
+            });
+    }
+
+    void register() {
+        String email = emailField.getText().toString().trim();
+        String pass = passField.getText().toString().trim();
+        if(email.isEmpty() || pass.isEmpty()){
+            Toast.makeText(this, "اكمل البيانات", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        statusText.setText("جاري إنشاء الحساب...");
+        auth.createUserWithEmailAndPassword(email, pass)
+            .addOnSuccessListener(a -> {
+                String uid = auth.getCurrentUser().getUid();
+                Map<String, Object> user = new HashMap<>();
+                user.put("email", email);
+                user.put("createdAt", System.currentTimeMillis());
+                db.collection("users").document(uid).set(user);
+                statusText.setText("تم إنشاء الحساب: " + email);
+            })
+            .addOnFailureListener(e -> {
+                statusText.setText("فشل: " + e.getMessage());
+            });
     }
 }
