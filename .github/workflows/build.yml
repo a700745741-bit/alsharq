@@ -13,19 +13,19 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-      - name: Setup Gradle 7.6.4
+      - name: Setup Gradle 8.0
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: 7.6.4
+          gradle-version: 8.0
       - name: Build Debug APK
         run: |
           chmod +x./gradlew || true
           if [ -f "./gradlew" ]; then
-          ./gradlew assembleDebug --stacktrace
+           ./gradlew assembleDebug --stacktrace
           else
-            gradle wrapper --gradle-version 7.6.4
+            gradle wrapper --gradle-version 8.0
             chmod +x./gradlew
-          ./gradlew assembleDebug --stacktrace
+           ./gradlew assembleDebug --stacktrace
           fi
       - name: Upload APK
         uses: actions/upload-artifact@v4
