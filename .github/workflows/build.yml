@@ -12,6 +12,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
+      - name: Cleanup bad files
+        run: rm -f build.sh
       - name: Build Debug APK
         run: gradle assembleDebug --warning-mode all
       - uses: actions/upload-artifact@v4
