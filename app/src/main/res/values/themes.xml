@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Alsharq" parent="Theme.AppCompat.DayNight.DarkActionBar">
-    </style>
-</resources>
+    <style name="Theme.AlSharq" parent="Theme.AppCompat.DayNight.DarkActionBar">
+            <item name="colorPrimary">#1B5E20</item>
+                    <item name="colorPrimaryDark">#1B5E20</item>
+                            <item name="colorAccent">#4CAF50</item>
+                                </style>
+                                </resources>
+                                
