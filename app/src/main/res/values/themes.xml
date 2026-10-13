@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <style name="Theme.AlSharq" parent="android:Theme.Light.NoTitleBar"/>
-  </resources>
+    <style name="Theme.Alsharq" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <item name="colorPrimary">#0D47A1</item>
+        <item name="colorPrimaryDark">#0D47A1</item>
+        <item name="colorAccent">#2196F3</item>
+    </style>
+</resources>
