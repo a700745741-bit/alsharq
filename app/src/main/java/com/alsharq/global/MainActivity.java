@@ -1,62 +1,102 @@
 package com.alsharq.global;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.*;
-import android.widget.LinearLayout;
+import android.widget.GridView;
+import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import java.util.HashMap;
-import java.util.Map;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
-    EditText emailField, passField;
-    Button loginBtn, registerBtn;
-    TextView statusText;
-    FirebaseAuth auth;
-    FirebaseFirestore db;
+
+    GridView gridView;
+    ArrayList<TeamSection> sections;
+    public static final String PREFS_NAME = "AlsharqPrefs";
+    public static final String KEY_SECTIONS = "sections";
+    String adminPassword = "1234"; // غير كلمة سر المدير من هنا
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(60, 120, 60, 60);
-        emailField = new EditText(this);
-        emailField.setHint("البريد الالكتروني");
-        passField = new EditText(this);
-        passField.setHint("كلمة المرور");
-        passField.setInputType(129);
-        loginBtn = new Button(this);
-        loginBtn.setText("تسجيل دخول");
-        registerBtn = new Button(this);
-        registerBtn.setText("انشاء حساب");
-        statusText = new TextView(this);
-        statusText.setText("مرحبا في الشرق العالمي");
-        layout.addView(statusText);
-        layout.addView(emailField);
-        layout.addView(passField);
-        layout.addView(loginBtn);
-        layout.addView(registerBtn);
-        setContentView(layout);
-        auth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
-        loginBtn.setOnClickListener(v -> {
-            String e = emailField.getText().toString().trim();
-            String p = passField.getText().toString().trim();
-            if(e.isEmpty()||p.isEmpty()){Toast.makeText(this,"اكمل البيانات",Toast.LENGTH_SHORT).show();return;}
-            statusText.setText("جاري الدخول...");
-            auth.signInWithEmailAndPassword(e,p).addOnSuccessListener(a-> statusText.setText("تم الدخول: "+e)).addOnFailureListener(err-> statusText.setText("خطأ: "+err.getMessage()));
+        setContentView(R.layout.activity_main);
+
+        gridView = findViewById(R.id.gridView);
+        loadSections();
+
+        SectionAdapter adapter = new SectionAdapter(this, sections, false);
+        gridView.setAdapter(adapter);
+
+        // ضغطة عادية = مشاهدة القسم
+        gridView.setOnItemClickListener((parent, view, position, id) -> {
+            Intent intent = new Intent(MainActivity.this, SectionViewActivity.class);
+            intent.putExtra("position", position);
+            startActivity(intent);
         });
-        registerBtn.setOnClickListener(v -> {
-            String e = emailField.getText().toString().trim();
-            String p = passField.getText().toString().trim();
-            if(e.isEmpty()||p.isEmpty()){Toast.makeText(this,"اكمل البيانات",Toast.LENGTH_SHORT).show();return;}
-            statusText.setText("جاري انشاء الحساب...");
-            auth.createUserWithEmailAndPassword(e,p).addOnSuccessListener(a-> {
-                Map<String,Object> u = new HashMap<>();
-                u.put("email", e);
-                db.collection("users").document(auth.getUid()).set(u);
-                statusText.setText("تم انشاء الحساب: "+e);
-            }).addOnFailureListener(err-> statusText.setText("خطأ: "+err.getMessage()));
+
+        // ضغطة طويلة = دخول المدير (فقط على أيقونة الشرق - اول واحدة)
+        gridView.setOnItemLongClickListener((parent, view, position, id) -> {
+            if (position == 0) { // اول ايقونة هي الشرق
+                showAdminDialog();
+                return true;
+            }
+            return false;
         });
+    }
+
+    private void showAdminDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("دخول المدير");
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("ادخل كلمة سر المدير");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        builder.setView(input);
+        builder.setPositiveButton("دخول", (dialog, which) -> {
+            if (input.getText().toString().equals(adminPassword)) {
+                startActivity(new Intent(MainActivity.this, AdminActivity.class));
+            } else {
+                Toast.makeText(this, "كلمة السر خطأ", Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton("الغاء", null);
+        builder.show();
+    }
+
+    private void loadSections() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        String json = prefs.getString(KEY_SECTIONS, null);
+        if (json == null) {
+            // اول مرة - انشئ 8 اقسام افتراضية
+            sections = new ArrayList<>();
+            sections.add(new TeamSection("فريق الشرق", "الشعار الرسمي", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("الاخبار", "لا يوجد اخبار حاليا", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("المباريات", "لا يوجد مباريات", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("اللاعبون", "قائمة اللاعبين", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("الصور", "معرض الصور", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("الفيديوهات", "معرض الفيديو", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("الادارة", "ادارة الفريق", R.drawable.ic_launcher_foreground));
+            sections.add(new TeamSection("عن الفريق", "معلومات عنا", R.drawable.ic_launcher_foreground));
+            saveSections();
+        } else {
+            Type type = new TypeToken<ArrayList<TeamSection>>(){}.getType();
+            sections = new Gson().fromJson(json, type);
+        }
+    }
+
+    private void saveSections() {
+        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit();
+        editor.putString(KEY_SECTIONS, new Gson().toJson(sections));
+        editor.apply();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadSections();
+        gridView.setAdapter(new SectionAdapter(this, sections, false));
     }
 }
