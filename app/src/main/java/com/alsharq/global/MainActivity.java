@@ -30,15 +30,29 @@ public class MainActivity extends AppCompatActivity {
 
         loadData();
 
-        // إذا أول مرة فاضية نضيف أقسام افتراضية
+        // هذا ينشئ 8 قوائم ثابتة أول مرة فقط
         if (sections.isEmpty()) {
-            sections.add(new TeamSection("من نحن", "شركة الشرق العالمية..."));
-            sections.add(new TeamSection("خدماتنا", "نقدم خدمات..."));
+            sections.add(new TeamSection("1- من نحن", "محتوى من نحن..."));
+            sections.add(new TeamSection("2- رؤيتنا", "محتوى رؤيتنا..."));
+            sections.add(new TeamSection("3- رسالتنا", "محتوى رسالتنا..."));
+            sections.add(new TeamSection("4- خدماتنا", "محتوى خدماتنا..."));
+            sections.add(new TeamSection("5- فريق العمل", "محتوى الفريق..."));
+            sections.add(new TeamSection("6- مشاريعنا", "محتوى المشاريع..."));
+            sections.add(new TeamSection("7- عملاؤنا", "محتوى العملاء..."));
+            sections.add(new TeamSection("8- تواصل معنا", "محتوى التواصل..."));
             saveData();
         }
 
         SectionAdapter adapter = new SectionAdapter(this, sections, false);
         recyclerView.setAdapter(adapter);
+
+        // زر دخول الإدارة - انت فقط تعرفه
+        // لازم تضيف زر في activity_main.xml اسمه adminButton
+        try {
+            findViewById(R.id.adminButton).setOnClickListener(v -> {
+                startActivity(new Intent(this, AdminActivity.class));
+            });
+        } catch (Exception e) {}
     }
 
     @Override
@@ -60,10 +74,5 @@ public class MainActivity extends AppCompatActivity {
     public void saveData() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         prefs.edit().putString(KEY, new Gson().toJson(sections)).apply();
-    }
-
-    // زر للانتقال للادمن - ممكن تحطه في القائمة
-    public void goAdmin() {
-        startActivity(new Intent(this, AdminActivity.class));
     }
 }
