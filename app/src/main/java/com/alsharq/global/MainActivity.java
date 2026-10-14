@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         // زر دخول الإدارة - انت فقط تعرفه
         // لازم تضيف زر في activity_main.xml اسمه adminButton
         try {
-            findViewById(R.id.adminButton).setOnClickListener(v -> {
+            findViewbyId(R.id.adminButton).setOnClickListener(v -> {
                 startActivity(new Intent(this, AdminActivity.class));
             });
         } catch (Exception e) {}
