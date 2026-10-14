@@ -1,53 +1,65 @@
 package com.alsharq.global;
 
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.widget.GridView;
+import android.view.LayoutInflater;
+import android.widget.EditText;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
 
 public class AdminActivity extends AppCompatActivity {
 
-    GridView gridView;
-    ArrayList<TeamSection> sections;
+    RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin);
 
-        gridView = findViewById(R.id.gridViewAdmin);
-        loadSections();
+        recyclerView = findViewById(R.id.adminRecycler);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        refresh();
 
-        SectionAdapter adapter = new SectionAdapter(this, sections, true);
-        gridView.setAdapter(adapter);
-
-        gridView.setOnItemClickListener((parent, view, position, id) -> {
-            Intent intent = new Intent(AdminActivity.this, EditSectionActivity.class);
-            intent.putExtra("position", position);
-            startActivity(intent);
-        });
-    }
-
-    private void loadSections() {
-        SharedPreferences prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
-        String json = prefs.getString(MainActivity.KEY_SECTIONS, null);
-        if (json != null) {
-            Type type = new TypeToken<ArrayList<TeamSection>>(){}.getType();
-            sections = new Gson().fromJson(json, type);
-        } else {
-            sections = new ArrayList<>();
-        }
+        findViewById(R.id.addButton).setOnClickListener(v -> showAddDialog());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadSections();
-        gridView.setAdapter(new SectionAdapter(this, sections, true));
+        refresh();
+    }
+
+    void refresh() {
+        recyclerView.setAdapter(new SectionAdapter(this, MainActivity.sections, true));
+    }
+
+    void showAddDialog() {
+        var view = LayoutInflater.from(this).inflate(R.layout.dialog_add, null);
+        EditText tTitle = view.findViewById(R.id.dialogTitle);
+        EditText tContent = view.findViewById(R.id.dialogContent);
+
+        new AlertDialog.Builder(this)
+                .setTitle("إضافة قسم")
+                .setView(view)
+                .setPositiveButton("إضافة", (d, w) -> {
+                    String title = tTitle.getText().toString();
+                    String content = tContent.getText().toString();
+                    if (!title.isEmpty()) {
+                        MainActivity.sections.add(new TeamSection(title, content));
+                        saveAndRefresh();
+                    }
+                })
+                .setNegativeButton("إلغاء", null)
+                .show();
+    }
+
+    void saveAndRefresh() {
+        SharedPreferences prefs = getSharedPreferences(MainActivity.PREFS, MODE_PRIVATE);
+        prefs.edit().putString(MainActivity.KEY, new Gson().toJson(MainActivity.sections)).apply();
+        refresh();
     }
 }
