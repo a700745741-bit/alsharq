@@ -1,52 +1,65 @@
 package com.alsharq.global;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
 import android.widget.TextView;
-import java.util.ArrayList;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.List;
 
-public class SectionAdapter extends BaseAdapter {
-    Context context;
-    ArrayList<TeamSection> sections;
-    boolean isAdmin;
+public class SectionAdapter extends RecyclerView.Adapter<SectionAdapter.ViewHolder> {
 
-    public SectionAdapter(Context context, ArrayList<TeamSection> sections, boolean isAdmin) {
+    private List<TeamSection> list;
+    private Context context;
+    private boolean isAdmin;
+
+    public SectionAdapter(Context context, List<TeamSection> list, boolean isAdmin) {
         this.context = context;
-        this.sections = sections;
+        this.list = list;
         this.isAdmin = isAdmin;
     }
 
+    @NonNull
     @Override
-    public int getCount() {
-        return sections.size();
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View v = LayoutInflater.from(context).inflate(R.layout.item_card, parent, false);
+        return new ViewHolder(v);
     }
 
     @Override
-    public Object getItem(int position) {
-        return sections.get(position);
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        TeamSection section = list.get(position);
+        holder.title.setText(section.title);
+        holder.content.setText(section.content);
+
+        holder.itemView.setOnClickListener(view -> {
+            if (isAdmin) {
+                Intent i = new Intent(context, EditSectionActivity.class);
+                i.putExtra("pos", position);
+                i.putExtra("title", section.title);
+                i.putExtra("content", section.content);
+                context.startActivity(i);
+            } else {
+                Intent i = new Intent(context, SectionViewActivity.class);
+                i.putExtra("title", section.title);
+                i.putExtra("content", section.content);
+                context.startActivity(i);
+            }
+        });
     }
 
     @Override
-    public long getItemId(int position) {
-        return position;
-    }
+    public int getItemCount() { return list.size(); }
 
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
-        if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(R.layout.item_section, parent, false);
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView title, content;
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            title = itemView.findViewById(R.id.cardTitle);
+            content = itemView.findViewById(R.id.cardContent);
         }
-        TextView title = convertView.findViewById(R.id.sectionTitle);
-        ImageView icon = convertView.findViewById(R.id.sectionImage);
-
-        TeamSection sec = sections.get(position);
-        title.setText(sec.title);
-        icon.setImageResource(R.drawable.ic_launcher_foreground);
-
-        return convertView;
     }
 }
