@@ -1,5 +1,4 @@
 package com.alsharq.global;
-
 public class Section {
     public String title;
     public String desc;
