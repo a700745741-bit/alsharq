@@ -1,32 +1,22 @@
-package com.alsharq.global;
-import android.content.Intent;
-import android.os.Bundle;
-import android.widget.Button;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import java.util.ArrayList;
-import java.util.List;
+package com.alsharq.alhami;
+import android.content.Intent; import android.net.Uri; import android.os.Bundle; import android.widget.Toast; import android.app.AlertDialog; import android.widget.EditText; import androidx.appcompat.app.AppCompatActivity; import com.google.firebase.firestore.FirebaseFirestore; import com.google.firebase.messaging.FirebaseMessaging;
 public class MainActivity extends AppCompatActivity {
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        RecyclerView recyclerView = findViewById(R.id.recyclerView);
-        Button adminButton = findViewById(R.id.adminButton);
-        adminButton.setOnClickListener(v -> {
-            startActivity(new Intent(MainActivity.this, AdminActivity.class));
+    FirebaseFirestore db; int logoClicks=0; long lastClickTime=0; String ADMIN_PASS="alsharq2026";
+    @Override protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState); setContentView(R.layout.activity_main); db=FirebaseFirestore.getInstance();
+        FirebaseMessaging.getInstance().subscribeToTopic("alsharq_news");
+        findViewById(R.id.logoLayout).setOnClickListener(v->{
+            long now=System.currentTimeMillis(); if(now-lastClickTime>2000) logoClicks=0; logoClicks++; lastClickTime=now;
+            if(logoClicks>=5){logoClicks=0; showAdminLogin();}
         });
-        List<Section> sections = new ArrayList<>();
-        sections.add(new Section("من نحن", "نحن شركة الشرق العالمية"));
-        sections.add(new Section("رؤيتنا", "أن نكون رواداً"));
-        sections.add(new Section("رسالتنا", "تقديم خدمات متميزة"));
-        sections.add(new Section("خدماتنا", "الاستيراد والتصدير"));
-        sections.add(new Section("فريق العمل", "فريق متخصص"));
-        sections.add(new Section("مشاريعنا", "أهم مشاريعنا"));
-        sections.add(new Section("عملاؤنا", "نفتخر بخدمة عملائنا"));
-        sections.add(new Section("تواصل معنا", "عدن - اليمن"));
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(new SectionAdapter(sections));
+        findViewById(R.id.icon1).setOnClickListener(v->open("players")); findViewById(R.id.icon2).setOnClickListener(v->open("presidents"));
+        findViewById(R.id.icon3).setOnClickListener(v->open("news")); findViewById(R.id.icon4).setOnClickListener(v->open("matches"));
+        findViewById(R.id.icon5).setOnClickListener(v->open("gallery")); findViewById(R.id.icon6).setOnClickListener(v->open("championships"));
+        findViewById(R.id.icon7).setOnClickListener(v->open("history")); findViewById(R.id.icon8).setOnClickListener(v->open("stadium"));
+        findViewById(R.id.btn_whatsapp).setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/967777777777"))));
+        findViewById(R.id.btn_facebook).setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://facebook.com/alsharqteam"))));
+        db.collection("news").addSnapshotListener((value, error)->{ if(value!=null &&!value.isEmpty()) Toast.makeText(this,"خبر جديد 🔔",Toast.LENGTH_SHORT).show(); });
     }
+    void showAdminLogin(){ EditText input=new EditText(this); input.setHint("كلمة السر"); new AlertDialog.Builder(this).setTitle("دخول المدير").setView(input).setPositiveButton("دخول",(d,w)->{ if(input.getText().toString().equals(ADMIN_PASS)) startActivity(new Intent(this,AdminActivity.class)); else Toast.makeText(this,"خطأ",Toast.LENGTH_SHORT).show(); }).show(); }
+    void open(String c){ Intent i=new Intent(this,ListActivity.class); i.putExtra("collection",c); startActivity(i); }
 }
