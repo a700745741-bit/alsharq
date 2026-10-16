@@ -10,8 +10,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - run: chmod +x gradlew
-      - run:./gradlew assembleDebug
+      - run:./gradlew aD
       - uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug
+          name: apk
+          path: app/build/outputs/apk/debug/
