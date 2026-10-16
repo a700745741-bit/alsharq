@@ -1,0 +1,96 @@
+name: Build PWA to APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build APK with WebView
+        run: |
+          mkdir -p MyApp/app/src/main/assets/www
+          cp -r *.html *.css *.json *.jpg *.png MyApp/app/src/main/assets/www/ 2>/dev/null || true
+          cp -r *.js MyApp/app/src/main/assets/www/ 2>/dev/null || true
+          
+          mkdir -p MyApp/app/src/main/java/com/alsharq/app
+          mkdir -p MyApp/app/src/main/res/layout
+          mkdir -p MyApp/app/src/main/res/values
+          
+          cat > MyApp/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.alsharq.app">
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <application android:label="الشرق" android:theme="@android:style/Theme.NoTitleBar">
+              <activity android:name=".MainActivity" android:exported="true">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN"/>
+                  <category android:name="android.intent.category.LAUNCHER"/>
+                </intent-filter>
+              </activity>
+            </application>
+          </manifest>
+          EOF
+          
+          cat > MyApp/app/src/main/java/com/alsharq/app/MainActivity.java << 'EOF'
+          package com.alsharq.app;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebView;
+          import android.webkit.WebSettings;
+          public class MainActivity extends Activity {
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              WebView webView = new WebView(this);
+              WebSettings settings = webView.getSettings();
+              settings.setJavaScriptEnabled(true);
+              settings.setDomStorageEnabled(true);
+              webView.loadUrl("file:///android_asset/www/index.html");
+              setContentView(webView);
+            }
+          }
+          EOF
+          
+          cat > MyApp/app/src/main/res/values/strings.xml << 'EOF'
+          <resources><string name="app_name">الشرق</string></resources>
+          EOF
+          
+          cat > MyApp/app/build.gradle << 'EOF'
+          plugins { id 'com.android.application' }
+          android {
+            namespace 'com.alsharq.app'
+            compileSdk 34
+            defaultConfig { applicationId "com.alsharq.app"; minSdk 21; targetSdk 34; versionCode 1; versionName "1.0" }
+          }
+          EOF
+          
+          cat > MyApp/settings.gradle << 'EOF'
+          include ':app'
+          EOF
+          
+          cat > MyApp/build.gradle << 'EOF'
+          plugins { id 'com.android.application' version '8.2.0' apply false }
+          EOF
+          
+          cd MyApp
+          chmod +x gradlew 2>/dev/null || true
+          gradle wrapper 2>/dev/null || true
+          ./gradlew assembleDebug || gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: alsharq-apk
+          path: MyApp/app/build/outputs/apk/debug/*.apk
