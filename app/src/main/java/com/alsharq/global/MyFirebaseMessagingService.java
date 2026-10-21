@@ -24,6 +24,7 @@ public class MyFirebaseMessagingService
         String body = "وصل خبر جديد من فريق الشرق";
 
         if (remoteMessage.getNotification() != null) {
+
             if (remoteMessage.getNotification().getTitle() != null) {
                 title = remoteMessage.getNotification().getTitle();
             }
@@ -49,6 +50,7 @@ public class MyFirebaseMessagingService
         createNotificationChannel();
 
         Intent intent = new Intent(this, MainActivity.class);
+
         intent.addFlags(
                 Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -77,14 +79,20 @@ public class MyFirebaseMessagingService
                         .setAutoCancel(true)
                         .setContentIntent(pendingIntent);
 
+        NotificationManagerCompat manager =
+                NotificationManagerCompat.from(this);
+
         try {
-            NotificationManagerCompat.from(this)
-                    .notify(
-                            (int) (System.currentTimeMillis() % Integer.MAX_VALUE),
-                            builder.build()
-                    );
-        } catch (SecurityException ignored) {
-            // قد يكون إذن الإشعارات غير ممنوح.
+            manager.notify(
+                    (int) (System.currentTimeMillis() % Integer.MAX_VALUE),
+                    builder.build()
+            );
+        } catch (SecurityException exception) {
+            android.util.Log.e(
+                    "AlSharq",
+                    "إذن الإشعارات غير متاح",
+                    exception
+            );
         }
     }
 
@@ -99,7 +107,7 @@ public class MyFirebaseMessagingService
             );
 
             channel.setDescription(
-                    "إشعارات الأخبار والأنشطة الجديدة لفريق الشرق"
+                    "إشعارات أخبار وأنشطة فريق الشرق"
             );
 
             NotificationManager manager =
