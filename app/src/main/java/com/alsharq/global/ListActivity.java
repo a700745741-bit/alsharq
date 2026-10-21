@@ -1,43 +1,121 @@
 package com.alsharq.alhami;
 
-import android.os.Bundle;
-import android.view.Gravity;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.os.Build;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
-public class ListActivity extends AppCompatActivity {
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
+
+public class MyFirebaseMessagingService
+        extends FirebaseMessagingService {
+
+    private static final String CHANNEL_ID = "alsharq_news";
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onMessageReceived(RemoteMessage remoteMessage) {
 
-        String title = getIntent().getStringExtra("title");
+        String title = "أخبار فريق الشرق";
+        String body = "وصل خبر جديد من فريق الشرق";
 
-        if (title == null || title.trim().isEmpty()) {
-            title = "قوائم فريق الشرق";
+        if (remoteMessage.getNotification() != null) {
+
+            if (remoteMessage.getNotification().getTitle() != null) {
+                title = remoteMessage.getNotification().getTitle();
+            }
+
+            if (remoteMessage.getNotification().getBody() != null) {
+                body = remoteMessage.getNotification().getBody();
+            }
         }
 
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(Gravity.CENTER);
-        layout.setPadding(24, 24, 24, 24);
+        if (remoteMessage.getData().containsKey("title")) {
+            title = remoteMessage.getData().get("title");
+        }
 
-        TextView heading = new TextView(this);
-        heading.setText(title);
-        heading.setTextSize(24);
-        heading.setGravity(Gravity.CENTER);
+        if (remoteMessage.getData().containsKey("body")) {
+            body = remoteMessage.getData().get("body");
+        }
 
-        TextView message = new TextView(this);
-        message.setText("محتوى فريق الشرق سيظهر هنا.");
-        message.setTextSize(18);
-        message.setGravity(Gravity.CENTER);
-        message.setPadding(0, 24, 0, 0);
+        showNotification(title, body);
+    }
 
-        layout.addView(heading);
-        layout.addView(message);
+    private void showNotification(String title, String body) {
 
-        setContentView(layout);
+        createNotificationChannel();
+
+        Intent intent = new Intent(this, MainActivity.class);
+
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP
+        );
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+                        | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setSmallIcon(
+                                android.R.drawable.ic_dialog_info
+                        )
+                        .setContentTitle(title)
+                        .setContentText(body)
+                        .setStyle(
+                                new NotificationCompat.BigTextStyle()
+                                        .bigText(body)
+                        )
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setAutoCancel(true)
+                        .setContentIntent(pendingIntent);
+
+        NotificationManagerCompat manager =
+                NotificationManagerCompat.from(this);
+
+        try {
+            manager.notify(
+                    (int) (System.currentTimeMillis() % Integer.MAX_VALUE),
+                    builder.build()
+            );
+        } catch (SecurityException exception) {
+            android.util.Log.e(
+                    "AlSharq",
+                    "إذن الإشعارات غير متاح",
+                    exception
+            );
+        }
+    }
+
+    private void createNotificationChannel() {
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "أخبار فريق الشرق",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+
+            channel.setDescription(
+                    "إشعارات أخبار وأنشطة فريق الشرق"
+            );
+
+            NotificationManager manager =
+                    getSystemService(NotificationManager.class);
+
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
     }
 }
