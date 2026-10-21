@@ -29,23 +29,29 @@ public class MainActivity extends AppCompatActivity {
             registerForActivityResult(
                     new ActivityResultContracts.StartActivityForResult(),
                     result -> {
-                        if (fileCallback != null) {
-                            Uri[] files = null;
 
-                            if (result.getResultCode() == RESULT_OK
-                                    && result.getData() != null) {
-
-                                Uri uri = result.getData().getData();
-
-                                if (uri != null) {
-                                    files = new Uri[]{uri};
-                                }
-                            }
-
-                            fileCallback.onReceiveValue(files);
-                            fileCallback = null;
+                        if (fileCallback == null) {
+                            return;
                         }
-                    });
+
+                        Uri[] selectedFiles = null;
+
+                        if (result.getResultCode() == RESULT_OK
+                                && result.getData() != null) {
+
+                            Intent data = result.getData();
+
+                            Uri selectedUri = data.getData();
+
+                            if (selectedUri != null) {
+                                selectedFiles = new Uri[]{selectedUri};
+                            }
+                        }
+
+                        fileCallback.onReceiveValue(selectedFiles);
+                        fileCallback = null;
+                    }
+            );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +60,23 @@ public class MainActivity extends AppCompatActivity {
         webView = new WebView(this);
         setContentView(webView);
 
+        configureWebView();
+
+        subscribeToNewsNotifications();
+
+        requestNotificationPermission();
+
+        if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState);
+        } else {
+            webView.loadUrl("https://alsharq1983.netlify.app/");
+        }
+    }
+
+    private void configureWebView() {
+
         WebSettings settings = webView.getSettings();
+
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
@@ -62,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient());
 
         webView.setWebChromeClient(new WebChromeClient() {
+
             @Override
             public boolean onShowFileChooser(
                     WebView view,
@@ -78,51 +101,76 @@ public class MainActivity extends AppCompatActivity {
                     Intent intent = params.createIntent();
                     filePicker.launch(intent);
                     return true;
-                } catch (Exception e) {
+
+                } catch (Exception exception) {
+
                     fileCallback = null;
+
                     Toast.makeText(
                             MainActivity.this,
                             "تعذر فتح معرض الصور",
-                            Toast.LENGTH_SHORT
+                            Toast.LENGTH_LONG
                     ).show();
+
                     return false;
                 }
             }
         });
+    }
 
-        FirebaseMessaging.getInstance().subscribeToTopic("all-news");
+    private void subscribeToNewsNotifications() {
 
-        requestNotificationPermission();
+        FirebaseMessaging.getInstance()
+                .subscribeToTopic("all-news")
+                .addOnCompleteListener(task -> {
 
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState);
-        } else {
-            webView.loadUrl("https://alsharq1983.netlify.app/");
-        }
+                    if (task.isSuccessful()) {
+                        android.util.Log.d(
+                                "AlSharq",
+                                "تم الاشتراك في إشعارات الأخبار"
+                        );
+                    } else {
+                        android.util.Log.e(
+                                "AlSharq",
+                                "تعذر الاشتراك في إشعارات الأخبار",
+                                task.getException()
+                        );
+                    }
+                });
     }
 
     private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= 33
-                && ContextCompat.checkSelfPermission(
-                        this,
-                        Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED) {
 
-            requestPermissions(
-                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
-                    1001
-            );
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED) {
+
+                requestPermissions(
+                        new String[]{
+                                Manifest.permission.POST_NOTIFICATIONS
+                        },
+                        1001
+                );
+            }
         }
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        webView.saveState(outState);
+
+        if (webView != null) {
+            webView.saveState(outState);
+        }
+
         super.onSaveInstanceState(outState);
     }
 
     @Override
     public void onBackPressed() {
+
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
@@ -132,9 +180,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+
         if (webView != null) {
             webView.destroy();
+            webView = null;
         }
+
         super.onDestroy();
     }
 }
