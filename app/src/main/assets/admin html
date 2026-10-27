@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إدارة فريق الشرق</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #eef3f8;
+  color: #17365d;
+}
+
+.container {
+  max-width: 650px;
+  margin: auto;
+}
+
+.card {
+  background: white;
+  padding: 22px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px #0001;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+input, textarea, select, button {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px solid #ccd5df;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+button {
+  border: none;
+  background: #0756a3;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+.danger {
+  background: #b3261e;
+}
+
+.logout {
+  background: #555;
+}
+
+.post {
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.post img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+#status {
+  text-align: center;
+  white-space: pre-wrap;
+  line-height: 1.7;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1>🔵 إدارة فريق الشرق</h1>
+  <p style="text-align:center">لوحة نشر الأخبار والأنشطة</p>
+
+  <div id="loginBox" class="card">
+    <h2>🔐 دخول الإدارة</h2>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="البريد الإلكتروني للإدارة"
+      autocomplete="username"
+    >
+
+    <input
+      id="password"
+      type="password"
+      placeholder="كلمة المرور"
+      autocomplete="current-password"
+    >
+
+    <button id="loginBtn">دخول</button>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+
+    <div class="card">
+      <h2>📝 نشر محتوى جديد</h2>
+
+      <input id="title" type="text" placeholder="عنوان الخبر">
+
+      <textarea
+        id="desc"
+        rows="5"
+        placeholder="تفاصيل الخبر أو النشاط"
+      ></textarea>
+
+      <select id="sec">
+        <option value="news">الأخبار</option>
+        <option value="players">اللاعبون</option>
+        <option value="presidents">رؤساء الفريق</option>
+        <option value="matches">المباريات</option>
+        <option value="gallery">معرض الصور</option>
+        <option value="championships">البطولات</option>
+        <option value="history">تاريخ الفريق</option>
+        <option value="staff">الجهاز الإداري</option>
+        <option value="fans">الجماهير</option>
+      </select>
+
+      <label for="media">اختيار صورة من الهاتف:</label>
+      <input id="media" type="file" accept="image/*">
+
+      <button id="publishBtn">نشر المحتوى</button>
+      <button id="logoutBtn" class="logout">تسجيل الخروج</button>
+    </div>
+
+    <div class="card">
+      <h2>📚 المنشورات السابقة</h2>
+      <div id="posts">جارٍ تحميل المنشورات...</div>
+    </div>
+
+  </div>
+
+  <p id="status"></p>
+</div>
+
+<script type="module">
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  deleteDoc,
+  doc,
+  serverTimestamp
+} from
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBPXnI_yIbOX-JCSSQLXtBt65pLsKF2H-w",
+  authDomain: "alsharqteam.firebaseapp.com",
+  projectId: "alsharqteam",
+  storageBucket: "alsharqteam.firebasestorage.app",
+  messagingSenderId: "405043013767",
+  appId: "1:405043013767:web:2b83eb4a057e3b24daf022"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const ADMIN_UID = "iRKxMrdJ5QRB6eXCtc6TCA0y4433";
+
+const loginBox = document.getElementById("loginBox");
+const adminPanel = document.getElementById("adminPanel");
+const statusBox = document.getElementById("status");
+
+function showStatus(message) {
+  statusBox.textContent = message;
+}
+
+function escapeHTML(value = "") {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
+
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    loginBox.classList.remove("hidden");
+    adminPanel.classList.add("hidden");
+    return;
+  }
+
+  if (user.uid !== ADMIN_UID) {
+    await signOut(auth);
+    showStatus("هذا الحساب غير مخوّل لإدارة الموقع.");
+    return;
+  }
+
+  loginBox.classList.add("hidden");
+  adminPanel.classList.remove("hidden");
+
+  showStatus("تم تسجيل الدخول بنجاح.");
+  await loadPosts();
+});
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    showStatus("أدخل البريد الإلكتروني وكلمة المرور.");
+    return;
+  }
+
+  const button = document.getElementById("loginBtn");
+  button.disabled = true;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    document.getElementById("password").value = "";
+  } catch (error) {
+    showStatus("تعذّر تسجيل الدخول. تحقق من بيانات الحساب وإعدادات Firebase.");
+    console.error(error);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await signOut(auth);
+  showStatus("تم تسجيل الخروج.");
+});
+
+async function imageToDataURL(file) {
+  if (!file) return "";
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("اختر ملف صورة صالحًا.");
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("الصورة أكبر من 8 ميغابايت. اختر صورة أصغر.");
+  }
+
+  const image = new Image();
+  const objectURL = URL.createObjectURL(file);
+
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = reject;
+      image.src = objectURL;
+    });
+
+    const maxDimension = 1000;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(image.width, image.height)
+    );
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return canvas.toDataURL("image/jpeg", 0.72);
+  } finally {
+    URL.revokeObjectURL(objectURL);
+  }
+}
+
+document.getElementById("publishBtn").addEventListener("click", async () => {
+  if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+    showStatus("سجّل الدخول بحساب الإدارة أولًا.");
+    return;
+  }
+
+  const title = document.getElementById("title").value.trim();
+  const desc = document.getElementById("desc").value.trim();
+  const sec = document.getElementById("sec").value;
+  const file = document.getElementById("media").files[0];
+  const button = document.getElementById("publishBtn");
+
+  if (!title || !desc) {
+    showStatus("اكتب عنوان المحتوى وتفاصيله.");
+    return;
+  }
+
+  button.disabled = true;
+  showStatus("جارٍ حفظ المحتوى...");
+
+  try {
+    const mediaUrl = await imageToDataURL(file);
+
+    if (mediaUrl.length > 900000) {
+      throw new Error("حجم الصورة بعد المعالجة ما زال كبيرًا. اختر صورة أصغر.");
+    }
+
+    await addDoc(collection(db, "posts"), {
+      title,
+      desc,
+      sec,
+      mediaUrl,
+      ts: serverTimestamp()
+    });
+
+    document.getElementById("title").value = "";
+    document.getElementById("desc").value = "";
+    document.getElementById("media").value = "";
+
+    showStatus("تم نشر المحتوى وحفظه في قاعدة البيانات.");
+    await loadPosts();
+
+  } catch (error) {
+    console.error(error);
+    showStatus("تعذّر النشر: " + (error.message || "تحقق من الاتصال وقواعد Firebase."));
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function loadPosts() {
+  const container = document.getElementById("posts");
+  container.textContent = "جارٍ تحميل المنشورات...";
+
+  try {
+    const postsQuery = query(
+      collection(db, "posts"),
+      orderBy("ts", "desc")
+    );
+
+    const snapshot = await getDocs(postsQuery);
+
+    if (snapshot.empty) {
+      container.textContent = "لا توجد منشورات حتى الآن.";
+      return;
+    }
+
+    container.replaceChildren();
+
+    snapshot.forEach(postSnapshot => {
+      const post = postSnapshot.data();
+      const postElement = document.createElement("div");
+      postElement.className = "post";
+
+      const heading = document.createElement("h3");
+      heading.textContent = post.title || "بدون عنوان";
+
+      const details = document.createElement("p");
+      details.textContent = post.desc || "";
+
+      const category = document.createElement("p");
+      category.textContent = "القسم: " + (post.sec || "");
+
+      postElement.append(heading, details, category);
+
+      if (post.mediaUrl && post.mediaUrl.startsWith("data:image/")) {
+        const img = document.createElement("img");
+        img.src = post.mediaUrl;
+        img.alt = post.title || "صورة المنشور";
+        postElement.appendChild(img);
+      } else if (post.mediaUrl) {
+        const link = document.createElement("a");
+        link.href = post.mediaUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "عرض المرفق";
+        postElement.appendChild(link);
+      }
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "danger";
+      deleteButton.textContent = "حذف المنشور";
+
+      deleteButton.addEventListener("click", async () => {
+        if (!auth.currentUser || auth.currentUser.uid !== ADMIN_UID) {
+          showStatus("ليس لديك صلاحية الحذف.");
+          return;
+        }
+
+        if (!confirm("هل تريد حذف هذا المنشور نهائيًا؟")) return;
+
+        deleteButton.disabled = true;
+
+        try {
+          await deleteDoc(doc(db, "posts", postSnapshot.id));
+          showStatus("تم حذف المنشور.");
+          await loadPosts();
+        } catch (error) {
+          console.error(error);
+          showStatus("تعذّر حذف المنشور. تحقق من قواعد Firebase.");
+          deleteButton.disabled = false;
+        }
+      });
+
+      postElement.appendChild(deleteButton);
+      container.appendChild(postElement);
+    });
+
+  } catch (error) {
+    console.error(error);
+    container.textContent =
+      "تعذّر تحميل المنشورات. تحقق من اتصال الإنترنت وقواعد Firestore.";
+  }
+}
+</script>
+</body>
+</html>
